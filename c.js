@@ -14,17 +14,30 @@ let parent = [];
 
 
 let pagePrms = driver.get(theBaselineUrl);
-pagePrms.then(async () => {
-    let menuitems = await findAllMenuItems(driver);
-    menuitems.map(async (item) => {await discoverItem(item, parent )});
-
+pagePrms.then(() => {
+    findOpenNodes(driver)
+        .then((openEls) => {
+            openEls.reverse();
+            openEls.forEach(async(el) => {await el.click()})
+        }).
+        then(async ()=>{
+            let menuitems = await findAllMenuItems(driver);
+            let menuitemsPrmss = menuitems.map((item) => {return discoverItem(item, parent )});
+            Promise.all(menuitemsPrmss)
+                .then((value) =>
+                    console.log('in then'))
+                .finally((value) =>{
+                    console.log('in finally');
+                    parent.forEach(item => printResult(item))
+                })
+        })
 });
-setTimeout(()=>
-{
-    console.log('Something');
-    parent.forEach(item => printResult(item))
-    },60000)
-
+// setTimeout(()=>
+// {
+//     console.log('Something');
+//     parent.forEach(item => printResult(item))
+//     },60000)
+//
 function printResult(parentHere,subNode = false){
     console.log(((subNode)?'\t':'')+parentHere.value)
     if ( parentHere.hasOwnProperty('child') ){
@@ -43,24 +56,39 @@ function printResult(parentHere,subNode = false){
     }
 }
 
-async function discoverItem(webItem,parent){
-    let tt = await webItem.getAttribute('data-name')
-        .then(menuItem)
-        .catch(error => {
-            return webItem.getAttribute('href')
-                                        .then(hrefItem) })
-        .then(
-            async (value) => {
-                return await handleItem(value,webItem,parent)}
-        );
+function discoverItem(webItem,parent){
+    return new Promise((resolve,reject)=> {
+        webItem.getAttribute('data-name')
+            .then(
+                menuItem
+            )
+            .catch(error => {
+                return webItem.getAttribute('href')
+                    .then(hrefItem)
+            })
+            .then((value) => {
+                    return handleItem(value, webItem, parent)
+                        .then( (value)=>
+                            resolve(value)
+                        )
+                }
+            )
+            .catch(error =>
+            {
+                console.log('Error from discoverItem: '+error);
+                reject(0)
+            });
+    })
 }
-async function handleItem(value, webItem, parent){
+function handleItem(value, webItem, parent){
     parent.push(value);
     switch( value.type ){
-        case 'menuitem':
-            return await hadnleMenuItem(webItem, parent);
+        case 'menuitem': {
+            let tt = hadnleMenuItem(webItem, parent);
+            return tt
+        }
         case 'href':
-            return await hadnleHrefItem(webItem, parent);
+            return hadnleHrefItem(webItem, parent);
     }
 }
 
@@ -95,16 +123,20 @@ function hadnleMenuItem(webItem, parent) {
                                 let allHrefsprms = findHrefs(nextSubling);
                                 Promise.all([allMenuItemsprms, allHrefsprms]).then((allMenuItems, allHrefs) => {
                                     parent[i].child = [];
-                                    allMenuItems
+                                    let allMenuItemsPrmss = allMenuItems
                                         .filter((el) => {
                                             return el.length !== 0
                                         })
                                         .concat(allHrefs)
                                         .filter(Boolean)[0]
-                                        .forEach((value) => {
-                                            discoverItem(value, parent[i].child).then(resolve())
+                                        .map((value) => {
+                                            return discoverItem(value, parent[i].child)
                                         });
+                                    Promise.all(allMenuItemsPrmss)
+                                        .then(value => resolve(2))
+                                        .catch((error)=>{console.log('Here 2')})
                                 })
+                                    .catch((error)=>{console.log('Here 1')})
                             })
                     })
                 },1000)
@@ -119,6 +151,11 @@ async function findHrefs(webEl){
 async function findAllMenuItems(webEl) {
     return await webEl.findElements(By.css('[role=menuitem]'))
 }
+async function findOpenNodes(webEl) {
+    return await webEl.findElements(By.css('[style*="transform: rotateZ(90deg)"]'))
+}
+
+
 function menuItem(value)
 {
     if ( value != null ) {
