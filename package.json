@@ -1,0 +1,14 @@
+{
+  "name": "linksforstorybook",
+  "version": "0.0.1",
+  "description": "This is a simple script to turn long links to storybook iframes to short ones",
+  "dependencies": {
+    "selenium-webdriver": ">=4.0.0-alpha.1",
+    "chromedriver": ">=2.46",
+    "bitly": ">=6.0.8"
+  },
+  "person": {
+    "name": "Eugene Doronin",
+    "email": "edoronin@cloud.upwork.com"
+  }
+}
